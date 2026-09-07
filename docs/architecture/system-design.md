@@ -1,174 +1,111 @@
-# System architecture
+# Module design
 
-Status: proposed, 2026-09-07. Evidence and alternatives: [research](research.md), [ADRs](decisions.md).
+Four-module boundaries retained from iteration 2. The user has endorsed this direction. [Module internals and stack](module-internals-and-stack.md) now provides proposed subdivisions, packages, database placement and a local runtime. Nothing authorizes implementation yet.
 
-## 1. Requirements and invariants
+## Design rule
 
-JARVIS is a personal runtime with persistent identity and useful continuity across interfaces. “One intelligence” means consistent identity, shared durable context, and coordinated authority; it does not require one immortal model process or a single reasoning stream.
+A module must have a useful standalone exercise with explicit inputs and observable outputs. It may depend on an existing library or external product. It must not require another unfinished JARVIS module merely to be developed or evaluated.
 
-| ID | Requirement | Architectural consequence |
-| --- | --- | --- |
-| R01 | Clients and inference sessions may terminate independently | State and job ownership belong to a backend. |
-| R02 | Tasks may last months with no model running | Durable schedules, waits, explicit cancellation and expiry. |
-| R03 | Delegated work does not occupy the user's desktop | Separate compute and graphical execution environments. |
-| R04 | Multiple replaceable harnesses | Small lifecycle contract plus namespaced provider extensions. |
-| R05 | Conversations remain recoverable; recall is selective | Canonical archive, provenance, structured and hybrid retrieval. |
-| R06 | Cognitive and operational memory cooperate | Link claims, tasks, artifacts, sessions, workspace checkpoints. |
-| R07 | Proactivity is authorized and quiet by default | Explicit subscriptions, deterministic filtering, notification policy. |
-| R08 | Powerful agents receive limited authority | External resource enforcement, expiring grants, isolated nodes. |
-| R09 | Completion is based on evidence | Verification contracts and an explicit unknown-outcome state. |
-| R10 | Voice, desktop, phone, and home share continuity | Backend conversation IDs; surface leases; independent media sessions. |
-| R11 | Local and cloud outages degrade predictably | Local storage/control; no silent privacy downgrade on fallback. |
-| R12 | Existing infrastructure is reused | Custom code handles product semantics and integration only. |
-| R13 | Multiple devices do not create conflicting executors | Single authoritative control plane, fenced execution leases. |
-| R14 | Extension must preserve trust boundaries | Reviewed capability declarations and constrained plugin processes. |
+Manual input is a valid first caller. A prepared directory can substitute for workspace provisioning; exported records can substitute for a live conversation feed. Substitutes satisfy the same boundary shape but do not prove real integration, production durability or security. Each module is evaluated separately, then the actual connection is evaluated when introduced.
 
-Scope assumptions: one owner, personal rather than enterprise multi-tenancy, Linux execution nodes initially, optional paid cloud inference. Guests and shared rooms are separate low-trust principals; no automatic access to the owner's memory. No hard realtime robotics, life-safety control, guaranteed universal GUI automation, or offline frontier-quality cognition.
+Keep product invariants firm: persistence outside model sessions, isolated delegated work, explicit authority and evidence-backed outcomes. The companion stack document selects revisable defaults for storage, transports and local deployment; keep those behind module boundaries. Independent modules do not require independent microservices.
 
-## 2. Architecture and process boundaries
+## 1. Execution
+
+**Purpose:** perform a supplied task through an existing harness and make its lifecycle observable.
+
+- Input: objective, caller-prepared workspace access, explicit authority/limits, optional context and expected artifact.
+- Output: execution handle, progress, terminal outcome and artifact references.
+- Owns: adapter configuration, mapping of native lifecycle to a small result vocabulary, native session reference and execution record.
+- Integrates: Codex App Server over stdio as the proposed first adapter; its tool loop, subprocess handling and native facilities remain its responsibility.
+- Does not own: intent discovery, long-term memory, environment provisioning, global scheduling or permission grants for other modules.
+
+**Standalone exercise:** manually submit a repository-analysis task against a prepared isolated directory. Read progress, inspect the report, cancel another run and observe a deliberate failure. This needs the chosen harness and its supported credentials; it needs no other JARVIS module.
+
+**BUILD:** a thin adapter and result handling. **INTEGRATE:** the harness. **REPLACEABLE:** the first provider and local presentation. Prefer an existing SDK/interface; do not duplicate its native functionality to make the adapter look richer.
+
+Progress and outcome are useful even without recovery. The first boundary must distinguish failed, cancelled and unknown outcomes; automatic resume can wait until an actual interrupted task demonstrates what needs preserving.
+
+## 2. Environments
+
+**Purpose:** provide an execution location with known isolation and lifecycle properties.
+
+- Input: requested resources, permitted imports, persistence need and required isolation.
+- Output: workspace access descriptor, observed status and a release operation.
+- Owns: its environment references, resource ownership, cleanup and supported persistence behavior.
+- Integrates: rootless Podman on Linux for the first compute exercise; libvirt/KVM is the proposed extension for GUI/stronger isolation.
+- Does not own: any model, harness, conversation or task planning.
+
+**Standalone exercise:** prepare an environment, import a fixture, inspect it with an ordinary command, stop/restart if supported, and release it. Verify that forbidden host resources are unavailable. No agent needs to run.
+
+**BUILD:** only lifecycle glue and the descriptor mapping. **INTEGRATE:** isolation and lifecycle machinery. **REPLACEABLE:** container/VM/backend. A single backend is enough to evaluate this boundary; do not build a universal environment manager.
+
+Execution can initially consume a manually prepared descriptor. Environments can initially serve a manual caller. Their eventual integration should replace the manual preparation, not rewrite either module. Remote access and snapshots are optional capabilities; unsupported restoration is reported explicitly.
+
+## 3. Recall
+
+**Purpose:** turn supplied records into useful, source-backed context for a supplied question.
+
+- Input: source records with stable references and visibility labels; a query and authorized source scope.
+- Output: relevant excerpts or claims, source references and limitations.
+- Owns: its ingested corpus or indexed copies, ingestion receipts and derived search state.
+- Integrates: SQLite relational queries and FTS5 first; extraction and semantic retrieval remain optional additions justified by recall evaluation.
+- Does not own: the canonical live conversation, execution history service, identity authority or workflow engine.
+
+**Standalone exercise:** ingest a fixed set of synthetic conversations and notes; ask known-answer, ambiguous and historical questions; inspect evidence; remove a source and ensure it stops appearing. No live agent or conversation client is required.
+
+**BUILD:** JARVIS-specific recall/evidence policy where existing software leaves a gap. **INTEGRATE:** retrieval/extraction primitives or a suitable memory package. **REPLACEABLE:** storage and search strategy. Begin by evaluating useful retrieval; automatic fact curation is not a prerequisite for recall.
+
+## 4. Conversation
+
+**Purpose:** preserve an interaction independently of a provider session and supply the recent turns for continuation.
+
+- Input: user turns, conversation reference and optional supplied context.
+- Output: assistant turns plus durable conversation history.
+- Owns: canonical turns and their ordering, provider-session references and explicit identity instructions.
+- Integrates: the official OpenAI TypeScript SDK and Responses API for the first text provider; model selection remains configurable.
+- Does not own: execution, recall, workspace control or proactive work.
+
+**Standalone exercise:** exchange turns, close the caller, reopen the history, and continue. Exercise persistence with a deterministic provider substitute, then exercise the real provider separately. A fabricated provider response must never be confused with a successful live call.
+
+**BUILD:** persistence and provider-independent continuity needed by JARVIS. **INTEGRATE:** inference. **REPLACEABLE:** model and store. The first conversation need not launch tools. Adding tools later should delegate to an existing harness rather than creating a new agent loop.
+
+## Composition after standalone evaluation
 
 ```mermaid
-flowchart TB
-  subgraph surfaces[Interface surfaces]
-    D[Omarchy overlay and approvals]
-    P[Phone and web client]
-    V[Voice peripheral]
-  end
-  subgraph home[Authoritative home node]
-    API[JARVIS Core API and domain modules]
-    W[JARVIS workflow and background workers]
-    T[Temporal service]
-    DB[(PostgreSQL: JARVIS and separate Temporal databases)]
-    B[(Encrypted artifact storage)]
-    C[Credential and action broker]
-  end
-  subgraph nodes[Execution node trust boundary]
-    N[Node supervisor and adapter host]
-    S[Podman compute workspace]
-    G[KVM graphical or untrusted VM]
-    H[Opt-in host action bridge]
-    A[Codex / Claude / OpenCode plus existing tools]
-  end
-  D --> API
-  P --> API
-  V --> API
-  API --> DB
-  API --> B
-  API --> T
-  T <--> W
-  W --> DB
-  W --> N
-  N --> S
-  N --> G
-  N --> H
-  S --> A
-  G --> A
-  W --> C
-  A -->|scoped requests| C
-  C --> E[External APIs and Home Assistant]
-  W --> M[Allowed model providers]
+flowchart LR
+  M[Manual caller and supplied fixtures] --> X[Execution]
+  M --> E[Environments]
+  M --> R[Recall]
+  M --> C[Conversation]
+  E -. workspace descriptor .-> X
+  R -. source-backed context .-> C
+  C -. exported turns .-> R
+  C -. explicit delegated request via composition .-> X
+  X -. result via composition .-> C
 ```
 
-These are trust/process boundaries, not a mandate for a microservice per box. The first deployment has a core application, a worker process from the same codebase, a node supervisor, and a separately privileged broker. Temporal and PostgreSQL are integrated infrastructure. Artifact storage starts as a managed encrypted filesystem with a blob API. Model adapters and connectors are modules or restricted child processes, not independently deployed services by default.
+Solid arrows are standalone entry points. Dotted arrows are optional future data flows, not startup dependencies or compulsory direct imports. The conversation/recall cycle is an export-and-query relationship, not a shared transaction or recursive invocation.
 
-Proposed application language: TypeScript for core, Temporal workers, and harness adapters; Python only where an integrated perception/browser library requires it, behind a process boundary. Use mature HTTP, validation, database, and SDK libraries rather than implementing transport or serialization. Native desktop UI uses Omarchy's QML/Quickshell mechanism. No shared-memory assumptions across these boundaries. Language choice is revisitable before implementation; neither low-level VM management nor a new privileged shell runtime is justified.
+Composition initially means explicit application wiring: obtain a descriptor and pass it to execution, or query recall and pass the returned context into a conversation request. Add correlation references here only when useful. Do not make modules adopt a universal task/state model beforehand.
 
-## 3. Responsibilities and ownership
+The first two useful compositions are independent choices:
 
-| Component | Classification | Owns | Must not own / why custom work is justified |
-| --- | --- | --- | --- |
-| Core domain modules | BUILD | Identity profile, conversations, tasks, project associations, API authorization | No code-editing/tool loop. Existing harness sessions cannot be the cross-provider system of record. |
-| Context and recall module | BUILD + INTEGRATE search | Authorized context packages, query selection, evidence and token budgets | No database/search engine. Product-specific compartment and provenance rules require composition. |
-| Workflow definitions | BUILD on INTEGRATE Temporal | Task transitions, approval waits, monitoring policies, reconciliation choices | No scheduler/replay engine. Task semantics differ from generic infrastructure. |
-| Policy and resource broker | BUILD on OS/credential libraries | Grants, mediated external actions, import/export and audit | No cryptography, OAuth implementation, VM engine, or arbitrary privileged command API. Cross-harness authority is the gap. |
-| Execution node supervisor | BUILD thin integration | Resource inventory, leases, adapter lifecycle, recovery receipts | No terminal emulator or general agent loop; integrates systemd, Podman and libvirt. |
-| Harness adapters | BUILD thin integration | Capability negotiation, status mapping, native session references | Harness retains planning, tool calls, compaction, code edits and native subagents. |
-| Memory curation policies | BUILD + OPTIONAL extraction library | Validation/promotion, contradiction policy, provenance, deletion | No new embedding or knowledge-graph engine. Canonical governance remains JARVIS-specific. |
-| Surface coordination | BUILD + INTEGRATE platform UI/media | Active turn/audio ownership, notifications, approvals and handoff | No custom audio codec, remote desktop protocol, or complete chat platform. |
-| Connectors | INTEGRATE; thin mapping when needed | Source cursors, schema mapping, health, service-specific verification | Use maintained APIs/MCP/CLIs. Home Assistant owns device protocols and home automations. |
-| Database, workflow, telemetry, secrets, virtualization | INTEGRATE | Their native infrastructure responsibilities | Do not wrap their complete APIs or write replacement engines. |
+- **Execution + Environments:** replace manual environment preparation with a real provider; prove the same bounded task still works and releases resources correctly.
+- **Conversation + Recall:** import saved turns and request cited context; prove conversation remains usable while recall is unavailable.
 
-## 4. Omarchy integration
+A conversational request that starts work comes later, once explicit delegation and result handling are useful. Long-running orchestration earns its own design when there is a concrete monitor or approval wait to preserve. Evaluate an existing durable engine at that point; do not require it for ordinary execution.
 
-Use Omarchy as the preferred first **desktop target**, not as a required core operating system. The release endpoint resolved to v4.0.2 during research; the rolling manual may describe newer branch behavior. Record the actual target release, package versions, and adapter capabilities before claiming support. [Release evidence](https://github.com/omacom/omarchy/releases/tag/v4.0.2)
+## How the rest of the vision fits
 
-Reuse mise-managed agent installation, default-agent preference, native skill locations, and usage UI. Preserve the user's default; it is a routing preference after permission/capability checks. Treat usage-panel totals as advisory, not an admission-control ledger. Keep tmux for optional human inspection, never as job durability. Crash diagnosis becomes an opt-in observation-to-task integration, with one notification owner. Omarchy's prompt/terminal shortcuts auto-approve work, so managed jobs call pinned native harness interfaces with explicit settings instead. [AI integration](https://omarchy.org/manual/ai/)
+| Product capability | Natural future connection | Evidence needed before selecting technology |
+| --- | --- | --- |
+| Omarchy UI | Present execution and conversation through native surfaces | A useful module to expose; actual target OS/release |
+| Browser/GUI work | Existing tools/harness inside a compatible environment | A specific GUI task, isolation and input ownership |
+| Voice | Another conversation input/output surface | Text continuity works; interruption/media requirements |
+| Phone continuity | Another client of owned conversation history | A second-device scenario and authority model |
+| Proactive monitoring | Durable orchestration calling supplied module contracts | A restartable timed/event-driven use case |
+| Home devices | Existing Home Assistant interface | Explicit action scope and verification |
+| Multi-machine operation | Remote environment/provider connection | A real need beyond one machine, including partition behavior |
 
-A small shell plugin supplies status, summon, job/workspace links and ordinary approvals. Omarchy's plugins run unsandboxed inside its shell process; no core database credentials or general broker authority belong there. High-impact approval can require a paired phone/passkey surface outside an agent-controlled desktop. Use third-party plugin locations rather than editing first-party files. [Plugin model](https://omarchy.org/manual/shell-plugins/)
-
-On a single PC, core services run under dedicated system accounts and survive desktop logout. On an always-on home server, use a stable Linux distribution and retain Omarchy as a peripheral/execution node. Installation reuse on Omarchy does not mean auto-upgrading production agents during live jobs: resolve approved versions into execution images, drain before updates, and retain rollback versions.
-
-## 5. Harness and model orchestration
-
-Integrate Codex App Server over local stdio for interactive tasks, streamed lifecycle and approvals; use `codex exec` for bounded batch execution. Do not base production transport on its documented experimental TCP WebSocket mode. Persist JARVIS execution IDs separately from native thread/turn IDs. [App Server](https://learn.chatgpt.com/docs/app-server), [batch mode](https://learn.chatgpt.com/docs/non-interactive-mode)
-
-Second adapter: Claude Agent SDK, which retains Claude Code's execution infrastructure. Configure hooks and permission callbacks explicitly; callbacks alone do not intercept all preapproved tools. Native session resumption remains an optimization, not the recovery authority. [SDK](https://code.claude.com/docs/en/agent-sdk/overview), [permissions](https://code.claude.com/docs/en/agent-sdk/permissions), [sessions](https://code.claude.com/docs/en/agent-sdk/sessions)
-
-OpenCode is the next alternative, using its HTTP/OpenAPI server and SSE, bound inside the execution boundary with authentication. Pi's RPC mode is an attractive smaller integration candidate if benchmarks justify a fourth adapter. Gemini CLI and Antigravity remain evaluated alternatives, not baseline requirements. Avoid integrating every installed launcher. [OpenCode](https://opencode.ai/docs/server/), [Pi](https://github.com/earendil-works/pi/tree/main/packages/coding-agent), [Gemini](https://github.com/google-gemini/gemini-cli)
-
-Routing is constrained selection, not an unconstrained model recommendation:
-
-1. Classify request: immediate conversation, bounded reasoning, delegated execution, or durable monitor.
-2. Resolve privacy compartment, required modality, capabilities, verification and deadline.
-3. Eliminate incompatible model/harness/workspace combinations, unavailable credentials, and exhausted budgets.
-4. Prefer a tested existing session for continuity, then owner preference and measured task-class results.
-5. Reserve cost/concurrency budget transactionally. Record route, version and short decision rationale.
-6. Fallback only within the same authority/data envelope. A local-only task cannot silently move to a cloud provider.
-
-Keep one frontier reasoning route and one realtime route initially. Smaller/local models may perform extraction and classification once evaluated; embeddings are separately versioned. “Astra” in the brief is not a durable model API identifier: deployment selects explicitly verified, entitled model IDs. Harness-supported provider/model pairs constrain routing; the router cannot assume any model works inside any harness.
-
-Bounded cognition returns typed proposals and evidence requests through provider structured-output facilities. If iterative tool use is necessary, delegate to an existing harness. Temporal executes approved task plans and waits; it does not become a second general-purpose inspect/edit/retry loop. Plans are data, not executable code generated by a model. Only reviewed workflow types can be scheduled. Harness-native subagents share the outer resource/cost boundary; prohibit uncontrolled nested delegation where the provider cannot account for it.
-
-## 6. Workspaces and computer use
-
-A workspace is a durable resource record and recovery manifest, not a single directory or container ID. Keep execution substrate, trust, persistence and location as separate dimensions.
-
-| Profile | Substrate | Default authority | Persistence |
-| --- | --- | --- | --- |
-| Bounded compute | Rootless Podman under execution account | Imported project; no host secrets; restricted egress | Durable volume, clean restart; no promise of process checkpoint |
-| Delegated desktop | KVM/libvirt VM with its own desktop and profile | Task-specific resources; authenticated accounts only by grant | Disk/application state; optional compatible RAM save |
-| Untrusted analysis | Disposable KVM VM | No credentials, host mounts, LAN, clipboard or devices | Destroy after verified export/retention window |
-| Host operation | Explicit user-session bridge or reviewed administrative action | Named path/application/service only | Host remains user-owned, not snapshot-revertible by JARVIS |
-| Remote execution | Any supported profile on registered node | Same grant and residency rules | Bound to node unless portable recovery proven |
-
-Rootless containers share a host kernel; use a VM for hostile inputs or builds with unacceptable host risk. A Git worktree is not isolation: import a repo copy or create worktrees inside an already isolated environment, never expose host `.git` paths by accident. Use libvirt for lifecycle rather than a new VM manager. [Podman](https://docs.podman.io/en/latest/markdown/podman.1.html), [libvirt](https://libvirt.org/manpages/virsh.html)
-
-Prefer structured application APIs for consequential writes and stable reads. For browser interaction, expose Playwright MCP to an existing harness in a workspace. It supplies structured browser access, not a security perimeter. Browser Use is an optional dedicated execution provider when measured browser-task performance warrants another agent. For arbitrary GUI work, evaluate Cua's drivers/tools with the existing harness first; its computer-use agent is another possible provider. Do not implement screenshot/action loops in JARVIS. [Playwright MCP](https://github.com/microsoft/playwright-mcp), [Browser Use](https://github.com/browser-use/browser-use), [Cua](https://github.com/trycua/cua)
-
-Choose a conservative Linux guest desktop that the selected computer-use provider actually supports. Do not force Hyprland into every VM. Host Wayland screen/input control must be tested against Omarchy's compositor and portal backend; a published RemoteDesktop portal does not establish installed backend support. If unsupported, retain delegated VM work and explicit host handoff rather than requiring unrestricted input injection. [Portal interface](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.RemoteDesktop.html)
-
-Workspace view integrates an existing viewer such as a libvirt/SPICE client first. Mobile browser viewing may later integrate a reviewed remote-desktop gateway; that selection is open. Viewing is read-only unless the broker grants an exclusive input lease. A “take control” transition first revokes agent input, then assigns human input. Never attach host clipboard or home-directory shares by default.
-
-## 7. Events and workflows
-
-Ingest authenticated source events into PostgreSQL with an outbox in the same transaction. A bounded dispatcher starts/signals Temporal workflows using stable IDs and application-level event deduplication. PostgreSQL owns domain records; Temporal owns workflow history/timers. Do not keep two independently writable task state machines. Workflow activities request version-checked domain transitions. See [contracts](contracts-and-lifecycles.md).
-
-No Kafka, Redis queue, custom durable bus, or new workflow DSL initially. The outbox is a database-to-engine handoff, not an attempt to reproduce a streaming platform. Adopt an established messaging system only after measured fanout/backlog requires one; preserve event IDs and inbox semantics.
-
-Events first pass deterministic subscription, deduplication, freshness, coalescing, quiet-hours and budget rules. Only uncertain decisions justify inference. Every autonomous action requires an active standing mandate that names scope, expiry, budget, sources and notification rules. “Keep watching tickets” compiles into a durable schedule with wake conditions, not a model left running. A missed time window is handled by declared skip/coalesce/catch-up policy.
-
-## 8. Interface and continuity design
-
-Desktop surfaces present activity, evidence, approvals and workspaces; chat is one view. All clients submit idempotent commands to the same backend. A device can detach without cancelling its tasks. Concurrent conversation turns are appended in server order; control commands use expected task versions to reject stale steering.
-
-Voice starts with push-to-talk, then optional local wake word. Use existing realtime transport/SDKs and echo cancellation. OpenAI Realtime supports a server sideband connection for tool handling while a client carries media; all tools exposed there terminate at the same JARVIS authority boundary. Media/provider sessions are temporary. Persist committed conversation turns and the portion actually delivered, with interrupted output marked incomplete. [Realtime server controls](https://developers.openai.com/api/docs/guides/realtime-server-controls)
-
-For barge-in, stop playback immediately on the device, signal response cancellation, and separately decide whether delegated work should be cancelled. “Stop talking” and “cancel that purchase” are different domain commands. One expiring audio-output lease per conversation prevents two devices speaking at once. Handoff creates a fresh provider session with compact context and server sequence cursor; do not promise migration of live model state.
-
-Use openWakeWord, faster-whisper and Piper as optional local speech components after hardware/language/license evaluation. Push-to-talk and text remain valid when local models cannot meet latency. [Wake word](https://github.com/dscripka/openWakeWord), [transcription](https://github.com/SYSTRAN/faster-whisper), [speech](https://github.com/OHF-Voice/piper1-gpl)
-
-Phone initially provides authenticated text/voice in the foreground, notifications, approvals and artifact access. A native mobile client is a later requirement for reliable background audio/sensor integration; do not claim a web client supplies that. Camera, location and microphone are per-device grants, with visible capture state. Push payloads contain opaque IDs, not personal content. Offline messages can queue locally but are labelled unsent; high-impact approvals require fresh online validation.
-
-Home Assistant owns hardware protocols and existing deterministic automations. JARVIS consumes events and invokes narrowly mapped services through the broker; it does not replace HA's scheduler or safety interlocks. Reconnect subscriptions and resync state after disconnect; do not assume its WebSocket feed is a replayable event archive. [HA API](https://developers.home-assistant.io/docs/api/websocket/)
-
-## 9. Deployment and scaling
-
-Initial physical topology: one Linux PC, separate service identities, PostgreSQL, Temporal, core/worker, broker, and node supervisor. No Kubernetes. Use systemd-managed services and pinned container images where appropriate; Temporal requires a real persistent deployment, not its development server. Separate Temporal databases/roles from JARVIS tables even when sharing the PostgreSQL instance. [Temporal deployment](https://docs.temporal.io/self-hosted-guide/deployment)
-
-Remote clients use authenticated HTTPS over a private network initially. Execution nodes establish authenticated outbound connections; no publicly exposed harness servers, hypervisor APIs, CDP, or database ports. Private networking supplements application authorization. Local privileged IPC uses Unix sockets with peer identity checks. Remote API contracts use versioned JSON/OpenAPI; client updates use resumable SSE, and duplex node control may use authenticated WebSocket. Temporal worker RPC stays on the trusted control network; untrusted workspaces never receive Temporal credentials.
-
-Scale along separate axes: more execution nodes, more worker concurrency, more curation throughput, then dedicated storage/Temporal capacity. Admission control reserves RAM, disk, GPU and provider quotas before dispatch. One graphical writer per workspace; separate coding workspaces for parallel modifications, with explicit integration/merge tasks. Voice/control and approvals take priority over bulk memory processing.
-
-Do not introduce active-active personal cores or synchronize PostgreSQL files between devices. Move the authority to an always-on home server when needed. Later availability uses supported PostgreSQL/Temporal replication and fenced failover. Node-local receipts and artifacts remain caches/operational records, never independent permission authorities. A partitioned node may finish only previously authorized bounded local work until lease expiry; it cannot acquire new external authority.
-
-An encrypted machine that has not been unlocked after reboot is unavailable. Laptop sleep suspends local service availability. These are honest product states; continuous operation requires an always-on, appropriately unlocked home node and reachable network, not merely a daemon.
+The core is the persistent product formed by these owned records and connections. It need not begin as a central platform service. The proposed local deployment hosts trusted modules together while keeping their SQLite files and APIs owned separately; Environments runs under its execution account. Every module still has a standalone caller mode. See the stack document for exact placement and trust limits.

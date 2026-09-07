@@ -1,35 +1,41 @@
-# JARVIS architecture review 01
+# JARVIS architecture — four-module design
 
-Date: 2026-09-07. Status: **Proposed for review; no implementation authorized.**
+Status: four-module direction endorsed by the user; detailed stack proposed, architecture only. Date: 2026-09-07.
 
-The repository initially contained only the original [product brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%20Astra.md), with no AGENTS.md, source tree, or Git metadata. That brief was read in full. The user approved creating a concise root AGENTS.md; the original brief remains unchanged. No runtime, dependency, scaffolding, or application code has been added.
+**Start with one execution module that can run and be evaluated by itself. Do not build a shared JARVIS platform first.**
 
-## Recommendation
+The [original product brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%20Astra.md) remains the vision. The first architecture is preserved in Git commit `300b7c3`. The four-module revision supersedes its platform selections and dependency-heavy roadmap. At the user's request, the next level of detail now proposes a concrete local stack without restoring those shared-platform prerequisites.
 
-Build a local-first personal control plane, not another agent harness. Keep JARVIS's identity, authority, task records, and memory in PostgreSQL; let Temporal own durable execution history and timers. Run existing agents through narrow adapters on execution nodes, using Podman for ordinary bounded compute and KVM/libvirt for isolated graphical and untrusted workloads. Make Omarchy the first desktop integration target, while keeping the core independent of a logged-in desktop and of Arch upgrades.
+**For module subdivisions, databases, agent placement and memory access, start with [Module internals and stack](module-internals-and-stack.md).** The proposed defaults are TypeScript/Node 24, module-owned SQLite files, Codex inside a rootless Podman workspace, and scoped MCP memory tools. Conversation uses the OpenAI SDK; Recall initially uses relational queries and SQLite FTS5.
 
-Start with one owner and one authoritative home node. Add execution nodes and clients without introducing competing copies of the core. Integrate Codex first, Claude Agent SDK second; retain OpenCode as the first alternative for provider flexibility. Use existing browser and computer-use tools within those harnesses before adding another dedicated autonomous browser agent.
+## Where to begin
 
-## Read in this order
+After implementation is authorized, give one existing harness a bounded task in a prepared, isolated directory. The execution module should expose progress, cancellation and the resulting artifacts without requiring memory, conversation, workspace provisioning, a database service or a workflow engine.
 
-1. [System architecture](system-design.md): requirements, boundaries, responsibilities, routing, surfaces, deployment, scaling.
-2. [Contracts and lifecycles](contracts-and-lifecycles.md): proposed interface semantics, sequences, state machines, workflow recovery.
-3. [Data and memory](data-and-memory.md): ownership, logical schema, ER diagram, retrieval, curation, retention.
-4. [Security and operations](security-and-operations.md): authority enforcement, threat model, failure matrix, observability, recovery targets.
-5. [Decision records](decisions.md): ten consequential proposals with alternatives and revisit criteria.
-6. [Research register](research.md): primary sources, observed capabilities, limits, and build-versus-integrate evidence.
-7. [Review gates and roadmap](review-and-roadmap.md): assumptions, acceptance scenarios, staged future work, coverage of the brief.
+The first exercise: inspect a sample repository and produce a report. A human supplies the request and inspects the report. This establishes whether the execution boundary works before introducing automated planning or verification. Details: [first exercise and module evaluations](review-and-roadmap.md).
 
-Diagrams are Mermaid source embedded in Markdown. The documents define contracts conceptually; they are not generated schemas, migrations, or implementation files.
+## The working architecture
 
-## Decisions that most need review
+| Module | Useful on its own | What it does not require |
+| --- | --- | --- |
+| Execution | Run a supplied task through an existing harness | Recall, conversation, provisioning, durable automation |
+| Environments | Prepare, inspect and release an isolated workspace | Any model or harness |
+| Recall | Ingest supplied records and retrieve source-backed context | Live conversation, execution, scheduling |
+| Conversation | Preserve turns and continue a conversation | Tools, recall, workspaces |
 
-| Choice | Why it matters |
-| --- | --- |
-| Temporal rather than embedded DBOS | Better separation of durable orchestration from workers; higher operational cost. |
-| Single authoritative local home node | Clear consistency and privacy; continuity pauses if that machine sleeps or fails. |
-| VM for authenticated delegated desktop work | Stronger isolation at a material RAM/storage cost. |
-| No unattended high-impact GUI transactions without enforceable mediation | A browser cookie commonly carries more authority than a task should receive. |
-| Canonical relational memory with optional Graphiti projection | Preserves JARVIS ownership and deletion semantics; custom curation policy remains necessary. |
+These are module boundaries, not four mandatory services or sequential milestones. Each starts with a manual caller and supplied inputs. Small composition code connects proven modules; it should not introduce a universal task database or event bus as an entry requirement.
 
-All numerical targets are proposed acceptance budgets, not measured performance. Integration feasibility, hardware capacity, model quality, and account entitlements remain validation gates. Approval of this design should precede any implementation work.
+## Read next
+
+- [Module design](system-design.md): responsibilities, independence and eventual composition.
+- [Module internals and stack](module-internals-and-stack.md): subcomponents, concrete technology choices, local file/process placement and agent memory read/write sequences.
+- [Boundary contracts](contracts-and-lifecycles.md): minimal semantics to evaluate, not a frozen API.
+- [Data ownership](data-and-memory.md): local ownership and source-backed recall without a mandated storage stack.
+- [Safety and failure handling](security-and-operations.md): what must hold in each standalone module.
+- [Decisions](decisions.md): what we retain, what is tentative, and what is deferred.
+- [Next exercise](review-and-roadmap.md): a clear starting point and independent evaluation cases.
+- [Research](research.md): prior primary-source findings, retained as candidate evidence.
+
+Temporal, PostgreSQL, distributed brokers, multi-node leases and automatic memory consolidation are **not prerequisites**. A local deployment is now proposed; remote/HA topology remains deferred. Module-local SQLite requires no database server or another JARVIS module.
+
+No implementation has begun. This revision changes documentation only.

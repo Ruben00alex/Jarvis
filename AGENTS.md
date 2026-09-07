@@ -15,6 +15,8 @@ Architecture and system design only. Research, inspect, and create architecture 
 - Enforce resource and credential boundaries outside model prompts. Make authority, provenance, uncertainty, and verification explicit.
 - Research current primary sources. Distinguish documented capabilities, design judgments, and untested assumptions. Challenge implementation intuitions while preserving the product.
 - Prefer a small number of deployable components with clear module boundaries. Explain BUILD, INTEGRATE, and OPTIONAL/REPLACEABLE choices.
+- Design modules to be independently buildable, runnable, and evaluable with supplied inputs or simple substitutes. Modularity includes independent development, not only composing existing products.
+- Do not require a shared platform before a module can be useful. Keep contracts small, distinguish invariants from tentative choices, and defer infrastructure decisions until concrete evidence requires them.
 - Keep consequential decisions and alternatives in architectural decision records; keep this file concise.
 
 ## Design entry point
