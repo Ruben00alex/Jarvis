@@ -4,6 +4,8 @@ This replaces the previous end-to-end roadmap. All work described here is future
 
 ## Recommended next exercise: execution alone
 
+This is a technical qualification exercise. After the owner's OS-1 clarification, it must not be treated as sufficient product validation or an enforced product-first order. The early product experiment is [a conversation with deliberately shared context](../product/shared-context-and-presence.md): switch the shared object, correct a referent and reopen later. A voice version also tests presence/interruption; a text/fixture version tests grounding only.
+
 **Question:** can a caller reliably hand a bounded task to one existing harness, observe it, stop it, and inspect its output?
 
 Supply a small synthetic repository, a prepared isolated location, supported harness credentials and the request: “Inspect this repository and produce a report describing its structure and one issue supported by file evidence.” Use a known seeded issue so the report can be assessed. Inputs are explicit; no task planner or recall system selects them.

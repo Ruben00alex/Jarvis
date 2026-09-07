@@ -2,6 +2,8 @@
 
 Design detail requested 2026-09-07. **Proposed default for implementation review, not implementation authorization.** This adds concrete choices to iteration 2 without adding a fifth product module or requiring all four to run together.
 
+**Scope clarification after the OS-1 discussion:** this stack locates storage and harnesses; it does not yet establish live host/mail/calendar access or reliable conversational reference resolution. The [shared-context design](../product/shared-context-and-presence.md) adds the missing responsibilities. The text-first module test below qualifies persistence/provider integration; voice and shared attention need an early product test of their own.
+
 ## 1. Shared engineering choices
 
 | Concern | Proposed default | Reason and limit |
@@ -79,13 +81,15 @@ No always-running “memory agent” is needed. Source ingestion and indexing ar
 | --- | --- | --- |
 | Turn handler | Validate incoming turn, persist it and serialize replies within a conversation | TypeScript + Zod; BUILD |
 | History/identity store | Canonical turns, interrupted output markers, explicit identity instructions | SQLite; BUILD domain data, INTEGRATE store |
-| Context assembly | Combine recent history with optionally supplied Recall results | TypeScript; BUILD bounded composition, no mandatory Recall dependency |
+| Context assembly and reference resolution | Combine recent history, explicitly shared current-source observations and optional Recall results; resolve ambiguous references or ask | TypeScript and existing model inference; BUILD bounded composition, no mandatory Recall dependency |
 | Provider adapter | Send request, stream answer, report provider failures/cancellation | Official OpenAI TypeScript SDK, Responses API first; INTEGRATE |
 | Source export | Supply committed turn revisions and removals for optional Recall ingestion | Direct export API; BUILD small mapping |
 
 Proposed first text model is `gpt-6-astra`, configurable rather than embedded in domain contracts, subject to account access and cost evaluation. The current official model page documents it; this does not establish the user's API entitlement. No silent switch to a different provider or data destination. [API quickstart](https://developers.openai.com/api/docs/quickstart), [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra)
 
 The conversational model's inference runs at the selected provider; there is no permanent model process living in the conversation database. JARVIS owns the turns and rebuilds context for continuation. Native provider response/session IDs are optional references. First implement ordinary text conversation without a tool loop. Delegated actions later go to Execution, which already integrates a harness.
+
+Current context needs the shared object's source ID, observation time and active topic, not just text that sounds relevant. Persist useful source associations in Recall when enabled; invalidate current-attention claims on a context change. A source reader must actually supply a calendar event or current message before the model can answer “next call” or “did they reply?”. Those connectors remain unimplemented and their exact integrations are not selected here.
 
 Store `conversations`, `turns`, `identity_profiles`, `provider_references` and, when live Recall export is connected, `source_changes`. No provider credentials belong in these tables. Identity instructions are explicit configuration; inferred preferences cannot overwrite them.
 

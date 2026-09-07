@@ -2,6 +2,8 @@
 
 Four-module boundaries retained from iteration 2. The user has endorsed this direction. [Module internals and stack](module-internals-and-stack.md) now provides proposed subdivisions, packages, database placement and a local runtime. Nothing authorizes implementation yet.
 
+**Product clarification:** the owner wants OS-1-like shared presence. Current source access and reference resolution are required to make that believable; persistent storage alone is insufficient. [Shared context and presence](../product/shared-context-and-presence.md) identifies how these responsibilities fit the four modules without adding a fifth system.
+
 ## Design rule
 
 A module must have a useful standalone exercise with explicit inputs and observable outputs. It may depend on an existing library or external product. It must not require another unfinished JARVIS module merely to be developed or evaluated.
@@ -63,6 +65,7 @@ Execution can initially consume a manually prepared descriptor. Environments can
 - Input: user turns, conversation reference and optional supplied context.
 - Output: assistant turns plus durable conversation history.
 - Owns: canonical turns and their ordering, provider-session references and explicit identity instructions.
+- Also needs for shared presence: a bounded current-topic/shared-source context and reference resolution. This is a proposed responsibility, not a capability already supplied by the model SDK.
 - Integrates: the official OpenAI TypeScript SDK and Responses API for the first text provider; model selection remains configurable.
 - Does not own: execution, recall, workspace control or proactive work.
 
@@ -101,8 +104,9 @@ A conversational request that starts work comes later, once explicit delegation 
 | Product capability | Natural future connection | Evidence needed before selecting technology |
 | --- | --- | --- |
 | Omarchy UI | Present execution and conversation through native surfaces | A useful module to expose; actual target OS/release |
+| Shared user attention | Deliberate host/document observation into Conversation; source links into Recall | Real capture capability and evaluation of ambiguous references; distinguish the user's desktop from the agent workspace |
 | Browser/GUI work | Existing tools/harness inside a compatible environment | A specific GUI task, isolation and input ownership |
-| Voice | Another conversation input/output surface | Text continuity works; interruption/media requirements |
+| Voice | Conversational presence; early product experiment | Actual interruption and grounding behavior; text-only tests establish less |
 | Phone continuity | Another client of owned conversation history | A second-device scenario and authority model |
 | Proactive monitoring | Durable orchestration calling supplied module contracts | A restartable timed/event-driven use case |
 | Home devices | Existing Home Assistant interface | Explicit action scope and verification |

@@ -44,6 +44,7 @@ Updated 2026-09-07 after the user endorsed the four modules and requested concre
 | Omarchy as primary desktop | Candidate aligned with brief | Target machine and a useful module to expose |
 | Language and local deployment | TypeScript/Node 24; trusted host plus environment account proposed | Module/runtime tests; remote topology still deferred |
 | Fixed milestones, numerical SLOs, capacity targets | Withdrawn from active design | Measured workload and owner priorities |
+| Product priority after OS-1 clarification | Shared presence and grounded context proposed for early evaluation | Real shared-attention conversation, ambiguity/correction and voice behavior |
 
 The first iteration's concerns about unknown external effects, provenance, host isolation and deletion remain valid. Its particular schemas and infrastructure are historical proposals, not a checklist every module must implement.
 
@@ -70,3 +71,17 @@ The first iteration's concerns about unknown external effects, provenance, host 
 **Consequences:** the memory bridge needs a real access boundary and deletion/freshness handling when connected. A scoped token may be readable within the workspace but cannot grant broader access. Runs without Recall still work with supplied context and exported proposed notes.
 
 **Revisit:** automate promotion of tested, low-risk categories or change transport for remote execution. Do not change the rule that agents access memory through controlled operations and source evidence.
+
+## ADR-015 — Grounded presence is a product foundation
+
+**Status:** proposal reflecting the owner's OS-1 reference and critique of ungrounded user stories.
+
+**Problem:** “this customer,” “next call,” and similar examples presumed access and shared history that the four-module stack did not establish. The product framing also reduced natural conversation to a late surface on top of delegated tasks.
+
+**Decision:** distinguish present shared attention, connected source state, conversation references and historical memory. Conversation owns bounded reference resolution; Recall supplies evidence/history; an explicit host observation adapter can supply permitted current context; Execution receives grounded resource references. Evaluate voice/shared attention early as a product experiment, independently of technical Execution qualification.
+
+**Alternatives:** inventing implicit context is incorrect. Requiring manual attachments forever prevents the desired experience. Building a universal world-state platform before testing one shared interaction repeats the earlier overdesign.
+
+**Consequences:** source capture/connectors and reference-resolution quality are explicit gaps, not hidden model capabilities. Four module boundaries remain. A supplied-context fixture can test interpretation but cannot validate a live observation integration. Existing technical exercises remain useful without defining the entire product order.
+
+**Revisit:** refine placement and source adapters based on real shared-context experiments; retain source identity, freshness and honest uncertainty as invariants.

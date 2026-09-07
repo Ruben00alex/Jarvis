@@ -2,7 +2,9 @@
 
 Status: four-module direction endorsed by the user; detailed stack proposed, architecture only. Date: 2026-09-07.
 
-**Start with one execution module that can run and be evaluated by itself. Do not build a shared JARVIS platform first.**
+For the user experience rather than implementation boundaries, start with [Shared context and presence](../product/shared-context-and-presence.md), then [What JARVIS is for](../product/README.md) and its [epics and stories](../product/epics-and-stories.md). The owner's OS-1 reference makes shared attention and natural conversation an early product question.
+
+**Keep module qualification and product validation distinct.** A standalone execution exercise can test a harness integration. A shared-attention conversation tests whether JARVIS can understand what the owner is referring to. Neither requires building a shared platform first, and one does not prove the other.
 
 The [original product brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%20Astra.md) remains the vision. The first architecture is preserved in Git commit `300b7c3`. The four-module revision supersedes its platform selections and dependency-heavy roadmap. At the user's request, the next level of detail now proposes a concrete local stack without restoring those shared-platform prerequisites.
 
@@ -12,7 +14,7 @@ The [original product brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%2
 
 After implementation is authorized, give one existing harness a bounded task in a prepared, isolated directory. The execution module should expose progress, cancellation and the resulting artifacts without requiring memory, conversation, workspace provisioning, a database service or a workflow engine.
 
-The first exercise: inspect a sample repository and produce a report. A human supplies the request and inspects the report. This establishes whether the execution boundary works before introducing automated planning or verification. Details: [first exercise and module evaluations](review-and-roadmap.md).
+The proposed Execution exercise is to inspect a sample repository and produce a report. A human supplies the request and inspects the report. This establishes the execution boundary. The proposed early product experiment is a conversation about deliberately shared material, including a changed referent, a correction and a return after reopening. Details: [module evaluations and product distinction](review-and-roadmap.md).
 
 ## The working architecture
 
