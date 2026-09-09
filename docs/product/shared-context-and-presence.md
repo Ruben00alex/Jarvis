@@ -1,6 +1,8 @@
-# Shared context and presence: the missing product foundation
+# Historical proposal: shared context and presence
 
-Owner clarification · 2026-09-07 · Product/architecture proposal only.
+Historical owner clarification · 2026-09-07 · Deferred by the 2026-09-09 scope revision.
+
+**This is not the current product foundation or implementation priority.** It is retained to preserve the earlier companion vision. The [current product brief](README.md), [architecture](../architecture/README.md), and ADR-016 in [decisions](../architecture/decisions.md) supersede its scope and early voice/shared-attention experiment. Its grounding principles remain useful for project context; its four-module/API-era placement is historical.
 
 The owner referenced OS-1 from *Her* (2013) and challenged how JARVIS could understand phrases such as “this customer” and “next call.” The earlier product stories skipped the source of that understanding. Treat those stories as conditional outcomes until their context requirements are explicit.
 

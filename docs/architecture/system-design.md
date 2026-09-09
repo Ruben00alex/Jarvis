@@ -1,115 +1,81 @@
-# Module design
+# System responsibilities and composition
 
-Four-module boundaries retained from iteration 2. The user has endorsed this direction. [Module internals and stack](module-internals-and-stack.md) now provides proposed subdivisions, packages, database placement and a local runtime. Nothing authorizes implementation yet.
+Current proposal · 2026-09-09 · See [decision status](decisions.md). These boundaries guide evaluation; they are not a mandate to implement a replacement for Paperclip.
 
-**Product clarification:** the owner wants OS-1-like shared presence. Current source access and reference resolution are required to make that believable; persistent storage alone is insufficient. [Shared context and presence](../product/shared-context-and-presence.md) identifies how these responsibilities fit the four modules without adding a fifth system.
+## Product and runtime separation
 
-## Design rule
+The project application owns the owner's view of objectives, tasks, decisions, and results. Clients attach to it; closing a browser does not stop work. The execution host must remain available for work to progress. Model/harness sessions can end without losing the management record.
 
-A module must have a useful standalone exercise with explicit inputs and observable outputs. It may depend on an existing library or external product. It must not require another unfinished JARVIS module merely to be developed or evaluated.
+Ordinary application code maintains schedules, dependencies, permissions, run claims, and delivery state. A planning or reporting assignment invokes the same subscribed Claude Code/Codex execution boundary as implementation. No separate model API client is part of the design.
 
-Manual input is a valid first caller. A prepared directory can substitute for workspace provisioning; exported records can substitute for a live conversation feed. Substitutes satisfy the same boundary shape but do not prove real integration, production durability or security. Each module is evaluated separately, then the actual connection is evaluated when introduced.
+The composition needs durable shared project state. Independent development does not: each boundary accepts fixtures or supplied records, and only live integration exercises need the real external services.
 
-Keep product invariants firm: persistence outside model sessions, isolated delegated work, explicit authority and evidence-backed outcomes. The companion stack document selects revisable defaults for storage, transports and local deployment; keep those behind module boundaries. Independent modules do not require independent microservices.
+## Responsibility map
 
-## 1. Execution
-
-**Purpose:** perform a supplied task through an existing harness and make its lifecycle observable.
-
-- Input: objective, caller-prepared workspace access, explicit authority/limits, optional context and expected artifact.
-- Output: execution handle, progress, terminal outcome and artifact references.
-- Owns: adapter configuration, mapping of native lifecycle to a small result vocabulary, native session reference and execution record.
-- Integrates: Codex App Server over stdio as the proposed first adapter; its tool loop, subprocess handling and native facilities remain its responsibility.
-- Does not own: intent discovery, long-term memory, environment provisioning, global scheduling or permission grants for other modules.
-
-**Standalone exercise:** manually submit a repository-analysis task against a prepared isolated directory. Read progress, inspect the report, cancel another run and observe a deliberate failure. This needs the chosen harness and its supported credentials; it needs no other JARVIS module.
-
-**BUILD:** a thin adapter and result handling. **INTEGRATE:** the harness. **REPLACEABLE:** the first provider and local presentation. Prefer an existing SDK/interface; do not duplicate its native functionality to make the adapter look richer.
-
-Progress and outcome are useful even without recovery. The first boundary must distinguish failed, cancelled and unknown outcomes; automatic resume can wait until an actual interrupted task demonstrates what needs preserving.
-
-## 2. Environments
-
-**Purpose:** provide an execution location with known isolation and lifecycle properties.
-
-- Input: requested resources, permitted imports, persistence need and required isolation.
-- Output: workspace access descriptor, observed status and a release operation.
-- Owns: its environment references, resource ownership, cleanup and supported persistence behavior.
-- Integrates: rootless Podman on Linux for the first compute exercise; libvirt/KVM is the proposed extension for GUI/stronger isolation.
-- Does not own: any model, harness, conversation or task planning.
-
-**Standalone exercise:** prepare an environment, import a fixture, inspect it with an ordinary command, stop/restart if supported, and release it. Verify that forbidden host resources are unavailable. No agent needs to run.
-
-**BUILD:** only lifecycle glue and the descriptor mapping. **INTEGRATE:** isolation and lifecycle machinery. **REPLACEABLE:** container/VM/backend. A single backend is enough to evaluate this boundary; do not build a universal environment manager.
-
-Execution can initially consume a manually prepared descriptor. Environments can initially serve a manual caller. Their eventual integration should replace the manual preparation, not rewrite either module. Remote access and snapshots are optional capabilities; unsupported restoration is reported explicitly.
-
-## 3. Recall
-
-**Purpose:** turn supplied records into useful, source-backed context for a supplied question.
-
-- Input: source records with stable references and visibility labels; a query and authorized source scope.
-- Output: relevant excerpts or claims, source references and limitations.
-- Owns: its ingested corpus or indexed copies, ingestion receipts and derived search state.
-- Integrates: SQLite relational queries and FTS5 first; extraction and semantic retrieval remain optional additions justified by recall evaluation.
-- Does not own: the canonical live conversation, execution history service, identity authority or workflow engine.
-
-**Standalone exercise:** ingest a fixed set of synthetic conversations and notes; ask known-answer, ambiguous and historical questions; inspect evidence; remove a source and ensure it stops appearing. No live agent or conversation client is required.
-
-**BUILD:** JARVIS-specific recall/evidence policy where existing software leaves a gap. **INTEGRATE:** retrieval/extraction primitives or a suitable memory package. **REPLACEABLE:** storage and search strategy. Begin by evaluating useful retrieval; automatic fact curation is not a prerequisite for recall.
-
-## 4. Conversation
-
-**Purpose:** preserve an interaction independently of a provider session and supply the recent turns for continuation.
-
-- Input: user turns, conversation reference and optional supplied context.
-- Output: assistant turns plus durable conversation history.
-- Owns: canonical turns and their ordering, provider-session references and explicit identity instructions.
-- Also needs for shared presence: a bounded current-topic/shared-source context and reference resolution. This is a proposed responsibility, not a capability already supplied by the model SDK.
-- Integrates: the official OpenAI TypeScript SDK and Responses API for the first text provider; model selection remains configurable.
-- Does not own: execution, recall, workspace control or proactive work.
-
-**Standalone exercise:** exchange turns, close the caller, reopen the history, and continue. Exercise persistence with a deterministic provider substitute, then exercise the real provider separately. A fabricated provider response must never be confused with a successful live call.
-
-**BUILD:** persistence and provider-independent continuity needed by JARVIS. **INTEGRATE:** inference. **REPLACEABLE:** model and store. The first conversation need not launch tools. Adding tools later should delegate to an existing harness rather than creating a new agent loop.
-
-## Composition after standalone evaluation
-
-```mermaid
-flowchart LR
-  M[Manual caller and supplied fixtures] --> X[Execution]
-  M --> E[Environments]
-  M --> R[Recall]
-  M --> C[Conversation]
-  E -. workspace descriptor .-> X
-  R -. source-backed context .-> C
-  C -. exported turns .-> R
-  C -. explicit delegated request via composition .-> X
-  X -. result via composition .-> C
-```
-
-Solid arrows are standalone entry points. Dotted arrows are optional future data flows, not startup dependencies or compulsory direct imports. The conversation/recall cycle is an export-and-query relationship, not a shared transaction or recursive invocation.
-
-Composition initially means explicit application wiring: obtain a descriptor and pass it to execution, or query recall and pass the returned context into a conversation request. Add correlation references here only when useful. Do not make modules adopt a universal task/state model beforehand.
-
-The first two useful compositions are independent choices:
-
-- **Execution + Environments:** replace manual environment preparation with a real provider; prove the same bounded task still works and releases resources correctly.
-- **Conversation + Recall:** import saved turns and request cited context; prove conversation remains usable while recall is unavailable.
-
-A conversational request that starts work comes later, once explicit delegation and result handling are useful. Long-running orchestration earns its own design when there is a concrete monitor or approval wait to preserve. Evaluate an existing durable engine at that point; do not require it for ordinary execution.
-
-## How the rest of the vision fits
-
-| Product capability | Natural future connection | Evidence needed before selecting technology |
+| Responsibility | Owns | Standalone input and observable output |
 | --- | --- | --- |
-| Omarchy UI | Present execution and conversation through native surfaces | A useful module to expose; actual target OS/release |
-| Shared user attention | Deliberate host/document observation into Conversation; source links into Recall | Real capture capability and evaluation of ambiguous references; distinguish the user's desktop from the agent workspace |
-| Browser/GUI work | Existing tools/harness inside a compatible environment | A specific GUI task, isolation and input ownership |
-| Voice | Conversational presence; early product experiment | Actual interruption and grounding behavior; text-only tests establish less |
-| Phone continuity | Another client of owned conversation history | A second-device scenario and authority model |
-| Proactive monitoring | Durable orchestration calling supplied module contracts | A restartable timed/event-driven use case |
-| Home devices | Existing Home Assistant interface | Explicit action scope and verification |
-| Multi-machine operation | Remote environment/provider connection | A real need beyond one machine, including partition behavior |
+| Project work | Objectives, milestone scope, tasks, dependencies, policy references, revisions | Supplied brief and task records → proposed/accepted plan and eligible-work view |
+| Coordination | Routine occurrences, dispatch eligibility, task claims, retry/capacity waits, reconciliation | Clock/events, task snapshot, fake executor → auditable dispatch decisions without LLM use |
+| Execution | Native session references, per-attempt progress, supported steering, outcome collection | Supplied assignment and prepared environment → run events, result, native references |
+| Environments | Owned execution resources, actual restrictions, lifecycle, preview process ownership | Resource profile and fixture → inspected descriptor, exports, observed stop/release |
+| Context and deliverables | Source revisions, scoped context bundles, result versions, evidence, decision references | Exported sources/run receipts → inspectable report inputs and deliverables |
+| Client presentation | Board, Today view, work discussions, review actions, stale-state indicators | Recorded state/events → usable interface and validated commands |
 
-The core is the persistent product formed by these owned records and connections. It need not begin as a central platform service. The proposed local deployment hosts trusted modules together while keeping their SQLite files and APIs owned separately; Environments runs under its execution account. Every module still has a standalone caller mode. See the stack document for exact placement and trust limits.
+These can be modules in one application or capabilities supplied by an integrated product. Do not create a service or package solely for every table row.
+
+## Project work and planning
+
+The owner sets objectives and executable scope. A planning run may propose decomposition, prioritize within standing authority, find missing requirements, and prepare a decision. The work boundary validates and records changes. Task creation can be authorized without authorizing execution; execution can be authorized without authorizing publication.
+
+A task is the durable unit of work. A run is an attempt through one native provider. Many runs can contribute to one task; one deliverable may require multiple checks or revisions. Provider-native subagents remain inside the harness's run unless their result needs an explicit task relationship.
+
+Every task points to a project and purpose. Parent/child relationships help explain why it exists; dependency edges identify prerequisites. Detect cycles and expose ambiguity instead of letting the planner create permanently blocked work.
+
+## Coordination without a new agent loop
+
+On a schedule, work-state change, or relevant external event:
+
+1. Read fresh project/routine state and check whether useful work exists.
+2. Check scope, dependency acceptance, credentials, capacity, and workspace availability.
+3. Claim eligible work using the selected coordinator's concurrency mechanisms.
+4. Supply a bounded assignment and native context reference to Execution.
+5. Collect outcome and verification evidence; update the task or create a review item.
+6. Schedule justified follow-up or wait for an external change.
+
+This describes product orchestration, not the harness's inspect/edit/test loop. Prefer an existing coordinator for dispatch and recovery. If Paperclip supplies those mechanisms, use its records and APIs rather than running a competing scheduler.
+
+Automatic continuation rechecks current scope. A parent agent declaring success alone does not unlock work that depends on an accepted or verified result. Parallelize independent assignments; serialize conflicting changes or integration into the shared branch.
+
+## Execution and environments
+
+A thin adapter launches or resumes the actual subscribed harness using a supported native interface. It retains native capabilities and declares limitations: pause, steer, resume, usage reporting, and structured output are not assumed uniform.
+
+A prepared environment can be supplied manually. Its descriptor identifies the host, repository/worktree, actual isolation, credential binding, and supported lifecycle. Git worktrees separate changes; they do not restrict filesystem, network, or credential access. A container, VM, or restricted account supplies the required resource boundary using existing OS tooling.
+
+The worker should not receive database administration credentials or control of the management host. Per-project task tools expose narrow operations where live context/updates are needed. A static bundle is sufficient for initial execution qualification.
+
+Preview processes have their own owner and lifecycle. Do not assume a dev server survives the coding CLI's exit. The selected environment system must manage it and report its live URL/expiry independently.
+
+## Context, evidence, and presentation
+
+Project context consists of actual briefs, decisions, tasks, customer notes, repository revisions, and artifacts. Explicit scope and source timestamps distinguish historical records from fresh observations. Search can start with known references and lexical queries. Model-assisted synthesis still uses subscribed harnesses.
+
+The UI shows artifact-first results with native transcripts available beneath them. A stored dashboard does not require inference to render. A failed prose briefing leaves the ordinary project status accessible.
+
+Multiple clients use the same server-side records. Commands carry revision and retry identity; a stale phone action cannot silently overwrite a newer laptop decision. Disconnection shows last known state until synchronization resumes.
+
+## Placement and development independence
+
+A proposed first deployment is one always-on host running the management application and persistent store, plus a separate restricted execution environment on that host. Tailscale provides private device connectivity and SSH provides administration. The management service outlives client connections and must not depend on an interactive SSH session.
+
+OS-agnostic means the product contracts and web access do not require Omarchy. It does not promise identical native sandbox/CLI support on Windows, macOS, and Linux. Qualify one real target first; other hosts can implement the same bounded capabilities later.
+
+Each responsibility has supplied-input evaluation in [the qualification plan](review-and-roadmap.md). Use fixtures for planning outputs, a fake clock/executor for coordination, and a prepared environment for execution. The first useful module need not wait for an unfinished dashboard, database abstraction, or memory subsystem.
+
+## BUILD, INTEGRATE, OPTIONAL
+
+- **INTEGRATE first:** project/agent coordination where Paperclip fits; native harnesses; database; OS isolation; Git and existing checks; private networking.
+- **BUILD only a demonstrated gap:** SaaS playbooks, source-to-deliverable mapping, owner-specific report/review behavior, or thin boundary glue.
+- **OPTIONAL/REPLACEABLE:** Paperclip implementation, custom workflow library, exact frontend/runtime, storage deployment, notification channel, and later remote worker transport.
+
+The build-versus-integrate decision remains open until observed results show which capabilities the chosen foundation actually supplies.

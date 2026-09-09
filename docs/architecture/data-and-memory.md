@@ -1,46 +1,70 @@
-# Data ownership and memory
+# Persistent project state and agent context
 
-The four-module ownership model remains unchanged. At the user's request, [Module internals and stack](module-internals-and-stack.md) now proposes SQLite per module, FTS5 for initial recall, and scoped agent memory operations. Its sections 6–9 specify database paths and complete read/write flows. No universal schema or vector service is required.
+Proposed ownership · 2026-09-09. The current goal is continuity of project work, decisions, and deliverables. General personal memory and ambient context are deferred.
 
-## Each module owns what it needs
+## Logical data ownership
 
-| Owner | Records it needs | What others receive |
+These are conceptual records, not migrations to build. Prefer equivalent records in an adopted product.
+
+| Owner | Records | Why they outlive a harness |
 | --- | --- | --- |
-| Execution | Request, native reference, observed outcome, artifact locations | Result/progress records |
-| Environments | Owned resources, access descriptor, observed status | Descriptor and lifecycle responses |
-| Conversation | Canonical turns, ordering, explicit identity instructions | Exported turns and recent context |
-| Recall | Ingested sources or indexed copies, source revisions, derived retrieval state | Evidence-backed matches |
+| Project work | Projects, briefs, milestones, task revisions, dependencies, policy references | Goals and authorization remain after a chat ends |
+| Coordination | Routines, occurrences, assignments, claims, capacity waits | Scheduled work and ownership survive process/client interruptions |
+| Execution | Attempts, worker/native session references, observations, effect receipts | Failures and retries remain inspectable |
+| Deliverables | Artifact references/digests, checks, review decisions, versions | The owner can inspect the exact work that was accepted |
+| Context | Sources, revisions, project associations, decision evidence | A later assignment can recover why work was requested |
+| Delivery | Inbox items, notification intents, delivery/read receipts | A notification failure does not rerun completed work |
 
-These responsibilities now map to four separate local SQLite files, each opened only by its owning module. This adds no database daemon or cross-module startup dependency. Modules use `better-sqlite3` and module-owned migrations; no shared SQL or cross-database joins. The files remain outside agent workspaces. Local fixtures establish boundary behavior; live restart and backup evaluation establishes the actual durability claim.
+Propose PostgreSQL for a composed custom application because multiple clients and durable coordination now need a common transactional authority. Modules own writes through narrow operations; one physical store does not mean agents or modules may change arbitrary tables. Standalone evaluation uses supplied snapshots/in-memory substitutes or a module-specific test store.
 
-## Recall can start with documents
+If Paperclip is adopted, its supported data model/API is authoritative for integrated work. Avoid a second writable backlog. External Git issues may be linked/imported initially; bidirectional sync is deferred until ownership and conflict rules are explicit.
 
-The first recall exercise uses a small synthetic corpus with known sources and answers. It need not extract a knowledge graph, infer preferences or perform nightly consolidation.
+## Physical records and artifacts
 
-Start by assessing whether supplied questions return useful evidence using SQLite FTS5 and ordinary scoped relational queries. Add semantic retrieval if fuzzy questions demonstrate a gap; grow structured claim handling when actual questions require it. Evaluate candidate packages rather than assuming all curation must be custom. [Research candidates](research.md)
+Code remains in Git repositories/worktrees. Large reports, screenshots, logs, and exports remain in managed artifact storage. Database references include origin, version/digest, owner, visibility, and retention intent. Initial storage may be local; object storage is optional if remote access/backup requirements justify it.
 
-The following meanings matter regardless of implementation:
+Native harness state stays in the execution environment's provider storage, bound to the correct account. Preserve native references and relevant exported messages/artifacts; do not assume every transient tool event or provider internal state can be exported.
 
-- A source has an identity, revision and visibility scope.
-- A retrieved answer points to the supporting source/excerpt; uncertainty remains visible.
-- Removing a source removes it from subsequent results and affected derived content.
-- A correction preserves enough evidence to distinguish historical truth from a current assertion when the caller asks a historical question.
-- An assistant's unsupported statement does not become confirmed personal knowledge merely because it was archived.
+The management record stores owner discussion and decisions independently of native sessions. A full conversational archive across unrelated applications is outside scope. Keep enough execution provenance to audit work without collecting hidden reasoning or secrets.
 
-Source-backed excerpts are a valid first result. Claims, entities, confidence fields, embeddings and temporal tables are possible later representations, not an entry schema.
+## Context assembly
 
-## Connect conversation without sharing internals
+An assignment receives a bounded package:
 
-Conversation remains the source of truth for its turns. Recall ingests exported copies carrying source IDs and revisions. Re-importing an unchanged revision should not duplicate it. A changed or deleted source must update the retrieval view.
+1. Current objective and executable scope revision.
+2. Task requirements and acceptance criteria.
+3. Relevant decisions and source excerpts with identities, revisions, and timestamps.
+4. Repository/base commit, prepared environment, and relevant prior artifacts.
+5. Allowed actions, run limits, and output contract.
+6. Native session reference if compatible resumption is available.
 
-The stack document defines revisioned imports, retryable receipts and deletion handling for the optional live connection. These are built only with that connection. Until then, a static exported corpus is explicitly a snapshot, not live memory. Conversation must still work when Recall is unavailable.
+Ordinary code selects by project/task links, explicit references, and lexical/structured search. A subscribed planning/research run can synthesize broader context when needed. No paid embeddings, API-based summarizer, or perpetual memory agent is required.
 
-Artifacts follow the same principle. An execution report can be supplied to Recall as a source without giving Recall authority over the workspace. A task-to-workspace association can later support resumption; it does not require modelling all operational memory first.
+Fresh sources must be fetched through authorized tooling before claiming current state. Stored customer notes are not live customer access; an old preview/check is not evidence for a new commit.
 
-## Agent access
+## Agent read and write boundary
 
-Agents read through scoped `memory.search` and `memory.read` tools. They write proposed notes/facts through `memory.propose`; Recall validates and stores them with provenance. They cannot open SQLite, execute SQL, overwrite confirmed facts, change identity or delete sources. First promotion can be performed by a trusted human caller. This makes writing memory functional without assuming automatic curation already exists. See the stack document's sequence diagram and authorization details.
+Execution can begin with a static bundle. When live task/context access is needed, expose scoped operations using the adopted product's tools/API or a small supported MCP/CLI bridge.
 
-## Decisions deliberately open
+Examples of intended operations: read task, search allowed project sources, propose task changes, attach deliverable, record blocker. These are meanings, not frozen tool names. The trusted server stamps run identity, validates project scope and authority, and rejects guessed cross-project IDs.
 
-The default store and initial index are now proposed; extraction model, semantic-search backend, graph representation, retention duration and cross-device replication remain open. Before storing real personal data, choose retention/encryption and test the documented SQLite backup/restore approach. We retain these obligations without implementing an entire storage platform as the first module.
+Agents never receive PostgreSQL credentials. A worker credential should authorize only its assigned operations and should not permit policy changes, account administration, or arbitrary source deletion.
+
+Agent proposals remain distinguishable from accepted decisions. Automatic updates within standing authority are allowed and recorded with actor/source provenance. Inferring a new preference or expanding scope does not turn it into an owner instruction.
+
+## Versioning and lifecycle
+
+- Record revisions for plans, tasks, policies, routines, and deliverables. Admission and review commands use expected revisions.
+- Use durable command/occurrence identities to make retries safe. Uniqueness is an application contract implemented with existing database/coordinator facilities.
+- Preserve decision history and supersession; mark a stale finding instead of rewriting what was known earlier.
+- Removing/correcting a source invalidates affected derived context and briefings. Search must not continue serving a deleted source from a stale index.
+- Retention covers artifacts, native session files, run records, and notifications as distinct classes. Deletion in JARVIS cannot promise deletion from Git hosts, model providers, or backups it does not control.
+- Store actual quota observations with timestamps and provider identity; unknown values are not zero. Never store secret values as task metadata.
+
+## Backup and restoration
+
+A usable restore includes consistent database state, referenced artifacts, project repositories/configuration as applicable, and enough protected provider-state information to identify what must be reauthenticated. Credentials follow separate secure-storage procedures; do not put raw tokens in routine reports or general artifact backups.
+
+After restore, run reconciliation before enabling dispatch. A recovered task record does not prove an old remote worker is stopped, a session is resumable, or a release was not already published.
+
+Test restoration into an isolated location and inspect missing artifact/session references. Search indexes can be rebuilt from retained sources. Choose actual retention periods and backup tools during implementation qualification rather than claiming high availability from persistence alone.

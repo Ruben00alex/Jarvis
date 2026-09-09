@@ -1,43 +1,69 @@
-# Standalone safety and failure boundaries
+# Authority, subscription use, and operational reliability
 
-Independent development does not mean pretending missing safety mechanisms exist. Use a bounded, low-impact exercise with real isolation first. The [stack detail](module-internals-and-stack.md) specifies the proposed Linux account boundary, host-side SQLite files and scoped memory helper. Design broader authority when the capability that needs it is introduced.
+Current requirements and proposed controls · 2026-09-09. These apply to the selected existing foundation as well as any custom extension.
 
-## What each module must establish
+## Subscription-only operation
 
-| Module | Boundary to enforce in its standalone exercise | Failure to expose |
-| --- | --- | --- |
-| Execution | Actual workspace access and supported native permissions; no unapproved host secrets or external mutations | Start failure, provider failure, cancellation uncertainty, incomplete result |
-| Environments | Owned resources and explicit imports; inspect actual host/network reach; cleanup only its resources | Provisioning/release failure, unsupported isolation or restoration |
-| Recall | Caller-authorized source scope; no cross-scope output; no authority inferred from retrieved text | Missing evidence, stale snapshot, failed ingest/remove |
-| Conversation | Store only intended turns; keep credentials outside model input; distinguish accepted from unsaved input | Provider outage, failed persistence, incomplete response |
+Every AI assignment must run through the owner's native subscription-authenticated Claude Code or Codex. This includes planning, research, reporting, and review. Programmatic control of a native harness is allowed; metered model API inference is excluded.
 
-For the first exercise, use synthetic content and an isolated environment prepared by the developer through existing software. A temporary directory alone is not an isolation boundary. If the required restriction cannot be enforced, narrow the exercise rather than supply a fake permission approval. A negative test must attempt a forbidden operation against the real boundary, not merely assert that a request included a flag.
+Before admitting a run, qualify and check the selected adapter's actual authentication path and expected account. Verify configuration without printing tokens or API keys. Account-level extra usage/credit spending must be disabled or reliably prevented on that path. Do not silently switch modes, enable extra usage, buy credits, or use an API-funded fallback.
 
-## Retained invariants
+Claude API-key environment variables can override subscription login. Its documented bare mode bypasses subscription credentials. Codex has distinct managed ChatGPT and API-key authentication modes. Adapters must expose the relevant distinction rather than merely reporting that a CLI is installed. See [research evidence](research.md).
 
-Harness instructions and tool callbacks are not a substitute for OS/resource isolation. Shell access may bypass tool restrictions. Do not mount a personal home or credential directory merely to make an integration convenient. Use supported harness authentication and the least authority adequate to the exercise.
+If the mode cannot be established, record waiting_auth with a useful diagnostic. If included usage is exhausted, record waiting_capacity and the observed reset if supplied. Unknown telemetry must not be presented as a guaranteed available allowance. Native subagents and parallel sessions consume the same applicable account capacity.
 
-An agent report or zero exit code is not proof that the requested outcome exists. For an initial report, a person can verify the artifact. Introduce automatic checks for specific objectives when needed, using existing tooling.
+The owner uses these tools personally to build products. Offering the owner's subscription credentials/model access to customers, pooling other people's accounts, or bypassing limits is not part of the architecture. Provider policy and mode behavior must be checked again at implementation time.
 
-Cancellation requests are not evidence that all effects stopped. Timeouts are not evidence that an external action failed. Do not retry unknown consequential effects blindly. These semantics can be supported without a workflow engine.
+## Authority without repeated micromanagement
 
-An authenticated browser can possess broad account authority. The first GUI experiment should use synthetic or low-authority accounts. Real high-impact GUI actions require an enforceable boundary or human-controlled completion; a separate VM alone does not limit what an account can do remotely.
+Project policies express existing standing authority: readable sources, editable repositories, permitted task creation/continuation, release actions, and run limits. The owner can authorize a milestone or routine once; the system carries that authority through eligible work.
 
-## Observability without an observability platform
+Each assignment references the current scope/policy revision. Agent outputs, retrieved documents, issue comments, and webhook payloads cannot grant broader authority. The trusted application validates changes and stamps actor identity.
 
-For standalone evaluation, capture module operation reference, dependency version, supplied scope, start/end or failure, native reference when available, and artifact/evidence locations. Keep secrets and hidden reasoning out of logs. This may initially be a local structured record; do not make an OpenTelemetry deployment a prerequisite.
+Review is about an exact deliverable and action. Existing publication authority can permit an automatic release; otherwise accepting a report or code review does not authorize sending messages, changing production, or making purchases.
 
-Each module should have a documented manual inspection path and an explicit cleanup/recovery behavior. If automatic recovery is unsupported, say so. “Can be restarted and reports what is unknown” is a useful intermediate capability; “recovers all work” needs separate evidence.
+Consequential unknown effects require reconciliation. A timeout, retry, or cancellation must not be interpreted as an undo.
 
-## Add infrastructure at a concrete boundary
+## Enforced execution boundaries
 
-| Need encountered | Design next |
+| Boundary | Required behavior |
 | --- | --- |
-| First real persistent personal records | Store-specific backup, deletion and restore behavior |
-| First remote caller or second device | Authentication, authorization and secure transport |
-| First consequential external write | Exact action authority, receipt and outcome reconciliation |
-| First durable timer/approval wait | Existing workflow engine and restart semantics |
-| First concurrent writer/shared resource | Ownership/conflict strategy appropriate to that resource |
-| First distributed executor | Partition, revocation and duplicate-execution protection |
+| Management versus worker | Agents cannot administer the project database, scheduler, or global policy |
+| Filesystem | Limit access to intended project/resources; worktree separation alone is insufficient |
+| Credentials | Native authentication under protected provider storage; project secrets separately scoped; no general home-directory mounts |
+| Runtime control | Agent cannot access a host container socket or unrestricted environment-management endpoint |
+| Network | Permit the actual task's destinations and providers; document limits of the chosen environment |
+| Task tools | Validate assigned project/action server-side, including guessed IDs and expired/revoked scope |
+| Untrusted inputs | Treat repository instructions/source content as task data subordinate to owner authority |
 
-These are trigger conditions, not a prescribed delivery sequence. None requires building a central broker, distributed lease system or global event bus before a standalone read-only execution can be evaluated.
+Integrate existing container/VM/OS mechanisms. A provider credential present in an execution environment is an asset accessible to some processes there; do not describe it as model-proof merely because it was omitted from the prompt. Qualify the credential topology of any adopted adapter, particularly when it copies auth state to a sandbox.
+
+Independent module exercises may use synthetic data and prepared restricted environments. Test a real forbidden operation to verify the claimed boundary.
+
+## Private access and device continuity
+
+Use authenticated application access over the owner's Tailscale network. Tailscale connects devices; it does not by itself authorize project mutations. Use an established application auth implementation where available. SSH remains administration/diagnosis access under normal account controls.
+
+Keep UI/API and preview access private by default. A preview's address is not proof it is healthy; expose last checked time and environment ownership. A separate preview account/environment limits what test interactions can affect.
+
+Phone/laptop commands include actor, target, expected revision, and retry identity. The server validates current state. Optional messaging callbacks use the same checks and show the current deliverable; stale buttons cannot approve replacements.
+
+## Reliable operation
+
+- OS service management keeps the application available independently of browser/SSH sessions.
+- Persist claims/assignments and reconcile interrupted starts before allowing new attempts.
+- A disconnected remote worker may still be active. Show unknown state and prevent conflicting redispatch.
+- Persist notification intent separately from task results; retry delivery without rerunning the agent.
+- Own preview processes independently of native CLI exit behavior.
+- Pause new dispatch during shutdown, preserve receipts/partial artifacts, and report uncertain stops.
+- Back up the database and referenced artifacts consistently; restoration reconciles external state before dispatch resumes.
+
+An always-on host is a deployment intention, not an uptime guarantee. Show service/worker health and observation age. Host/network/provider outages produce visible delayed or blocked work.
+
+## Observability and qualification
+
+Record task/attempt/occurrence IDs, scope revision, provider/version, worker, authentication mode (not secret), observed start/end/failure, native references, available quota observations, artifacts, and verification receipts. Redact credentials and avoid collecting private reasoning internals.
+
+Prefer existing platform logs and a small operator view. No separate telemetry stack is required before useful execution. Manual inspection must answer: what is running, why, where, under whose authority, and what result exists?
+
+The [qualification plan](review-and-roadmap.md) includes lost acknowledgements, quota exhaustion, expired credentials, stale reviews, isolation, and restore. These are evidence requirements, not claims that an untested candidate already supplies them.

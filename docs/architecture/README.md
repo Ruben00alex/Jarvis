@@ -1,43 +1,61 @@
-# JARVIS architecture — four-module design
+# JARVIS architecture: persistent SaaS project work
 
-Status: four-module direction endorsed by the user; detailed stack proposed, architecture only. Date: 2026-09-07.
+Revised 2026-09-09 · Architecture decisions and MVP handoff prepared.
 
-For the user experience rather than implementation boundaries, start with [Shared context and presence](../product/shared-context-and-presence.md), then [What JARVIS is for](../product/README.md) and its [epics and stories](../product/epics-and-stories.md). The owner's OS-1 reference makes shared attention and natural conversation an early product question.
+**Current product:** a personal project-management workspace that helps a solo SWE plan, delegate, review, and continue SaaS work across devices. Scheduled assignments produce deliverables without requiring a fresh chat prompt each time.
 
-**Keep module qualification and product validation distinct.** A standalone execution exercise can test a harness integration. A shared-attention conversation tests whether JARVIS can understand what the owner is referring to. Neither requires building a shared platform first, and one does not prove the other.
+The [current product brief](../product/README.md) captures the owner's revised direction. Preserve the [original architecture brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%20Astra.md) unchanged. The [Ben Davis transcript](../../Ben%20Davis%20-%20Architecture%20inspo.md) motivates Tailscale, SSH, remote previews, and work independent of the laptop.
 
-The [original product brief](../../JARVIS%20Architecture%20Brief%20for%20GPT-6%20Astra.md) remains the vision. The first architecture is preserved in Git commit `300b7c3`. The four-module revision supersedes its platform selections and dependency-heavy roadmap. At the user's request, the next level of detail now proposes a concrete local stack without restoring those shared-platform prerequisites.
+## Current decisions versus proposals
 
-**For module subdivisions, databases, agent placement and memory access, start with [Module internals and stack](module-internals-and-stack.md).** The proposed defaults are TypeScript/Node 24, module-owned SQLite files, Codex inside a rootless Podman workspace, and scoped MCP memory tools. Conversation uses the OpenAI SDK; Recall initially uses relational queries and SQLite FTS5.
+**User requirements:** subscription-only Claude Code/Codex for every AI role; persistent work beyond chat; scheduled deliverables and project-management assistance; remote access and always-on execution; OS-agnostic product. No paid model API or automatic extra usage.
 
-## Where to begin
+**Current deployment decisions:** start with one rented VPS, accessed privately through Tailscale and administered with SSH. Use Docker Compose to package the deployed services and named volumes/backups for durable state. The VPS provider, region, size, operating system, and backup destination remain open.
 
-After implementation is authorized, give one existing harness a bounded task in a prepared, isolated directory. The execution module should expose progress, cancellation and the resulting artifacts without requiring memory, conversation, workspace provisioning, a database service or a workflow engine.
+**Proposals to qualify:** Paperclip as the existing management/coordinator foundation; PostgreSQL for composed state; a responsive web UI; thin provider integrations and existing environment tooling. DBOS is a conditional alternative for a proven workflow gap, not a second scheduler to add automatically. Paperclip adoption still depends on proving a subscription-authenticated Claude Code or Codex path.
 
-The proposed Execution exercise is to inspect a sample repository and produce a report. A human supplies the request and inspects the report. This establishes the execution boundary. The proposed early product experiment is a conversation about deliberately shared material, including a changed referent, a correction and a return after reopening. Details: [module evaluations and product distinction](review-and-roadmap.md).
+## Shape of the system
 
-## The working architecture
+~~~mermaid
+flowchart TD
+  UI["Browser on laptop or phone"] <--> APP["Project application: plans, board, reviews"]
+  APP <--> STATE[("Durable project records")]
+  APP <--> COORD["Coordination: routines, eligibility, dispatch"]
+  COORD <--> EXEC["Execution adapter and worker"]
+  EXEC <--> ENV["Task environment and subscribed harness"]
+  EXEC --> RESULTS["Artifacts, checks, deliverables"]
+  RESULTS --> APP
+~~~
 
-| Module | Useful on its own | What it does not require |
-| --- | --- | --- |
-| Execution | Run a supplied task through an existing harness | Recall, conversation, provisioning, durable automation |
-| Environments | Prepare, inspect and release an isolated workspace | Any model or harness |
-| Recall | Ingest supplied records and retrieve source-backed context | Live conversation, execution, scheduling |
-| Conversation | Preserve turns and continue a conversation | Tools, recall, workspaces |
+These are responsibilities, not six deployable services. Keep management state outside execution environments. Ordinary code owns schedules, task claims, policy, and delivery. Every model-assisted plan, report, review, and implementation runs through the owner's authenticated Claude Code or Codex.
 
-These are module boundaries, not four mandatory services or sequential milestones. Each starts with a manual caller and supplied inputs. Small composition code connects proven modules; it should not introduce a universal task database or event bus as an entry requirement.
+## What changed
 
-## Read next
+| Previous active proposal | Revised direction |
+| --- | --- |
+| Persistent companion and early voice/shared attention | SaaS project plans, work board, review inbox, and routines |
+| Four fixed product modules: Execution, Environments, Recall, Conversation | Independently evaluable responsibilities aligned to project work; no mandated package count |
+| Responses API text provider and optional background model calls | Subscription-authenticated harness execution for all AI work |
+| Per-module SQLite as the composed default | PostgreSQL proposed where durable coordination and shared client state justify it; fixtures remain independent |
+| Linux/Omarchy and Unix sockets as the primary product topology | OS-agnostic interfaces; qualify the actual execution host and native transport |
+| Remote callers and durable timers deferred | Cross-device management and scheduled deliverables central to the target product |
 
-- [Module design](system-design.md): responsibilities, independence and eventual composition.
-- [Module internals and stack](module-internals-and-stack.md): subcomponents, concrete technology choices, local file/process placement and agent memory read/write sequences.
-- [Boundary contracts](contracts-and-lifecycles.md): minimal semantics to evaluate, not a frozen API.
-- [Data ownership](data-and-memory.md): local ownership and source-backed recall without a mandated storage stack.
-- [Safety and failure handling](security-and-operations.md): what must hold in each standalone module.
-- [Decisions](decisions.md): what we retain, what is tentative, and what is deferred.
-- [Next exercise](review-and-roadmap.md): a clear starting point and independent evaluation cases.
-- [Research](research.md): prior primary-source findings, retained as candidate evidence.
+Prior design is recoverable in Git commit 6f3b41c8b0cb7bfcf7a48e6a95785f01a579c561. [ADRs](decisions.md) preserve the historical decisions and record explicit supersession; the old scope must not leak back in as an implementation prerequisite.
 
-Temporal, PostgreSQL, distributed brokers, multi-node leases and automatic memory consolidation are **not prerequisites**. A local deployment is now proposed; remote/HA topology remains deferred. Module-local SQLite requires no database server or another JARVIS module.
+## Reading order
 
-No implementation has begun. This revision changes documentation only.
+| Document | Question it answers |
+| --- | --- |
+| [Product brief](../product/README.md) | What should improve for the owner? |
+| [Stories](../product/epics-and-stories.md) | What behavior would establish usefulness? |
+| [System design](system-design.md) | Which responsibility owns what? |
+| [Stack and integration choices](module-internals-and-stack.md) | What can be reused, and what remains conditional? |
+| [Contracts and lifecycles](contracts-and-lifecycles.md) | How does work advance, stop, and recover? |
+| [Data and context](data-and-memory.md) | What persists and how does an agent receive it? |
+| [Security and operations](security-and-operations.md) | How are subscription, authority, and failure boundaries enforced? |
+| [Qualification and roadmap](review-and-roadmap.md) | What evidence selects a foundation and proves the first useful slice? |
+| [Minimal VPS handoff](mvp-handoff.md) | What to provision, qualify, and demonstrate first? |
+| [Decisions](decisions.md) | Which choices are firm, proposed, superseded, or deferred? |
+| [Research](research.md) | Which primary sources support claims, and what is untested? |
+
+The first implementation handoff is [Minimal VPS handoff](mvp-handoff.md). It starts with Paperclip qualification against one subscribed agent run, a recurring deliverable, and a second-device review. A failing integration case should produce a documented gap before custom infrastructure is selected.
